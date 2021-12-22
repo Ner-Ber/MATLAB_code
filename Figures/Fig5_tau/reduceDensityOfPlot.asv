@@ -1,0 +1,10 @@
+WantedDens = 0.01/100;
+g = get(gca,'children');
+f = get(gca);
+
+XData_trimmed = g(2).XData(g(2).XData>=min(f.XAxis.Limits) & g(2).XData<=max(f.XAxis.Limits));
+YData_trimmed = g(2).YData(g(2).XData>=min(f.XAxis.Limits) & g(2).XData<=max(f.XAxis.Limits));
+D = min(abs(diff(XData_trimmed)));
+L = length(XData_trimmed);
+XData_reduced = XData_trimmed(1:round(WantedDens/D):L);
+YData_reduced = YData_trimmed(1:round(WantedDens/D):L);

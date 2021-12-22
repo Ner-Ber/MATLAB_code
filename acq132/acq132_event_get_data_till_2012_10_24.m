@@ -1,0 +1,94 @@
+function e=acq132_event_get_data_till_2012_10_24(exp_dir,event,Tstart,Tend,smt,varargin)
+%varargin : 'x_sg','Uxx','Uyy','Uxy','Sxx','Syy','Sxy','N','F','ch_094_ex'
+%if nargout=0,the function using assign to assign to the 'caller' varargin,t and t_trig
+%if nargin=1 the function returns structure
+%pre=post='max'  ->  maximum post and maximum pre
+%t[msec] ,t_trig[sec]
+%v_smt is string contains what objects are smoothed
+%use odd smt!!
+%event- may be vector. but if argout=0, only last event is returned
+
+event_vec=event;
+current_dir=pwd;
+
+for k=1:length(event_vec)
+    event=event_vec(k);
+    %--------------read the data and correct offset units
+    path=[current_dir '\' exp_dir '\acq132_093\multivent'];
+    ch_Master=acq132_event_read(path,event);
+    path=[current_dir '\' exp_dir '\acq132_094\multivent'];
+    [ch_Slave,t,t_trig]=acq132_event_read(path,event);
+    
+    %----read exp_details, and apply trigger delay from NiDaq
+    exp_details=expDetailsRead_till_2012_10_24(exp_dir); %!!!!!!!!!!!!!!!!!! this is different
+    t=t+exp_details.triggerDelay*1e3; %[msec]
+    
+    if length(ch_Master)==1 || length(ch_Slave)==1
+        continue
+    end
+    
+    %------make the time base
+    if(strcmp('start',Tstart)||Tstart<min(t))
+        startl=1;
+    elseif(Tstart>max(t))
+        error('Tstart out of limits');
+    else
+        [~,startl]=min(abs(t-Tstart));
+    end
+    
+    if(strcmp('end',Tend)||Tend>max(t))
+        endl=length(t);
+    elseif(Tend<min(t))
+        error('Tend out of limits');
+    else
+        [~,endl]=min(abs(t-Tend));
+    end
+    
+    %     if (strcmp(Tinterval,'min'))
+    %         interval=1;
+    %     else
+    %         interval=ceil(Tinterval/mean(diff(t(1:20))));
+    %     end
+    
+    %------cut the data
+    ch_Master=ch_Master(startl:endl,:);
+    ch_Slave=ch_Slave(startl:endl,:);
+    t=t(startl:endl,:);
+    %----create acq132 event data structure
+    acq132=acq132_convert_raw_to_data_till_2012_10_24(exp_dir,ch_Master,ch_Slave); %!!!!!!!!!!!!!!!!!! this is different
+    acq132.t=t;
+    acq132.t_trig=t_trig;
+    
+    %--------Smooth the data and creat the partial output -> acq132_out.
+    to=length(acq132.t)-(smt-1)/2;
+    from=(smt-1)/2+1;
+    
+    acq132_out.exp=exp_dir;
+    acq132_out.event=event;
+    acq132_out.t_trig=acq132.t_trig; %t, and t_trig are allways included at the output
+    acq132_out.t=acq132.t(from:to,:);
+    
+    for j=1: length(varargin)
+        if length(acq132.(varargin{j})(:,1))==length(t(:,1)); %smooth and cut the time dependent variables.i.e , all the fields with dim=1 as long as t
+            acq132_out.(varargin{j})=smoothts(acq132.(varargin{j})','b',smt)';
+            acq132_out.(varargin{j})=acq132_out.(varargin{j})(from:to,:);
+        else
+            acq132_out.(varargin{j})=acq132.(varargin{j});
+        end
+    end
+    %preallocation needed
+    e(k)=acq132_out;
+end
+
+%--- assignin the acq132_out to the caller
+if nargout==0
+    field_names=fieldnames(acq132_out);
+    for j=1:length(field_names)
+        assignin('caller',field_names{j},e(k).(field_names{j})); %if length(event)>1 -> only last event is returned
+        
+    end
+    clear acq132_out;
+end
+
+
+

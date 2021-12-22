@@ -1,0 +1,6 @@
+function outmu=ds_v2mu_2508(involts)
+% data is mm vs. volts
+ds2508fs=dlmread('c:\frics\DScal\ds2508_farside.txt');
+%the 1000 is to convert to microns
+if (ds2508fs(:,2)>involts)
+outmu=interp1(ds2508fs(:,2),ds2508fs(:,1),involts,'pchip')*1000;

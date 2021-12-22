@@ -1,0 +1,38 @@
+function saveRotDataToFile(RotStruct, fileFullPath)
+    fn = fieldnames(RotStruct);
+    fileID = fopen(fileFullPath,'w');
+    fprintf(fileID,'{\n');
+    for kNum = 1:numel(fn)
+        lastKey = kNum==numel(fn);
+        k = fn{kNum};
+        v = RotStruct.(k);
+        fprintf(fileID,'\t\"%s\":', k);
+        if ( isnumeric(v) )
+            fprintf(fileID,'[\n');
+            %--- split into main and last row for different notations
+            v_main = v(1:end-1,:);
+            v_end = v(end,:);
+            if ~isempty(v_main)
+                sz_v = size(v_main);
+                pString = repmat('%f, ', 1, sz_v(2));
+                pString = pString(1:end-2);
+                fprintf(fileID, ['\t\t[', pString, '],\n'], v');
+            end
+            
+            sz_v = size(v_main);
+            pString = repmat('%f, ', 1, sz_v(2));
+            pString = pString(1:end-2);
+            fprintf(fileID, ['\t\t[', pString, ']\n'], v');
+            
+            if lastKey
+            fprintf(fileID,'\t],\n');
+            else
+            fpr intf(fileID,'\t],\n');
+            end
+        else
+            fprintf(fileID,' \"%s\"', k);
+        end
+        
+    end
+    fprintf(fileID,'\n}\n');
+end
